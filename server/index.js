@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { initDB } = require('./db');
 // const smtpServer = require('./smtp'); // Deprecated for IMAP
-const { startImapListener } = require('./imap');
+const { startImapPolling } = require('./imap');
 const apiRoutes = require('./routes');
 
 const app = express();
@@ -28,18 +28,18 @@ initDB().then(() => {
         console.log(`HTTP API running on port ${API_PORT}`);
     });
 
-    // Start IMAP Listener (IDLE)
-    startImapListener();
+    // Start IMAP Polling
+    startImapPolling();
 
-    // Auto-Delete Old Emails (Retention Policy: 24 Hours)
+    // Auto-Delete Old Emails (Retention Policy: 7 Days)
     // Runs every hour
     const { getDB } = require('./db');
     setInterval(async () => {
         try {
             const db = getDB();
-            const result = await db.run("DELETE FROM emails WHERE received_at < datetime('now', '-1 day')");
+            const result = await db.run("DELETE FROM emails WHERE received_at < datetime('now', '-7 days')");
             if (result.changes > 0) {
-                console.log(`[Cleanup] Deleted ${result.changes} emails older than 24 hours.`);
+                console.log(`[Cleanup] Deleted ${result.changes} emails older than 7 days.`);
             }
         } catch (err) {
             console.error('[Cleanup] Error deleting old emails:', err);
@@ -50,8 +50,8 @@ initDB().then(() => {
     setTimeout(async () => {
         try {
             const db = getDB();
-            const result = await db.run("DELETE FROM emails WHERE received_at < datetime('now', '-1 day')");
-            console.log(`[Startup Cleanup] Deleted ${result.changes} emails older than 24 hours.`);
+            const result = await db.run("DELETE FROM emails WHERE received_at < datetime('now', '-7 days')");
+            console.log(`[Startup Cleanup] Deleted ${result.changes} emails older than 7 days.`);
         } catch (err) {
             console.error('[Startup Cleanup] Error:', err);
         }

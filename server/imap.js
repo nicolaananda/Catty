@@ -19,13 +19,13 @@ const config = {
 // Reusable function to fetch and save new messages
 async function fetchNewMessages(connection) {
     try {
-        const delay = 24 * 3600 * 1000;
-        let yesterday = new Date();
-        yesterday.setTime(Date.now() - delay);
+        const delay = 7 * 24 * 3600 * 1000; // 7 days
+        let sevenDaysAgo = new Date();
+        sevenDaysAgo.setTime(Date.now() - delay);
 
-        // Search for UNSEEN messages or just recent ones. 
-        // For IDLE, we usually care about what just arrived, but safety net: last 24h
-        const searchCriteria = [['SINCE', yesterday]];
+        // Search for messages from the last 7 days (matching retention policy)
+        // This ensures we fetch all emails that haven't been cleaned up yet
+        const searchCriteria = [['SINCE', sevenDaysAgo]];
         const fetchOptions = {
             bodies: ['HEADER', 'TEXT', ''],
             markSeen: false
