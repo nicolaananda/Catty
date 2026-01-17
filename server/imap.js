@@ -50,11 +50,33 @@ async function fetchNewMessages(connection) {
             const htmlBody = parsed.html;
 
             // Extract Destination Address
+            // Priority: X-Original-To > Delivered-To > X-Forwarded-To > To header
             let toAddr = '';
-            if (parsed.to && Array.isArray(parsed.to.value)) {
-                toAddr = parsed.to.value.map(t => t.address).join(', ');
-            } else if (parsed.to && parsed.to.text) {
-                toAddr = parsed.to.text;
+
+            // Check forwarding headers first (for emails forwarded from @catty.my.id to catsflix@nicola.id)
+            const headers = parsed.headers;
+            if (headers) {
+                const originalTo = headers.get('x-original-to') ||
+                    headers.get('delivered-to') ||
+                    headers.get('x-forwarded-to');
+
+                if (originalTo) {
+                    // Extract email address from header value
+                    const match = originalTo.toString().match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+                    if (match && (match[1].includes('@catty.my.id') || match[1].includes('@cattyprems.top'))) {
+                        toAddr = match[1];
+                        console.log(`IMAP: Found original recipient in headers: ${toAddr}`);
+                    }
+                }
+            }
+
+            // Fallback to standard To header if no forwarding header found
+            if (!toAddr) {
+                if (parsed.to && Array.isArray(parsed.to.value)) {
+                    toAddr = parsed.to.value.map(t => t.address).join(', ');
+                } else if (parsed.to && parsed.to.text) {
+                    toAddr = parsed.to.text;
+                }
             }
 
             // Deduplication Check
