@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Backend API Server
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: catty-backend
+    restart: unless-stopped
+    ports:
+      - "4443:4443"
+    environment:
+      - NODE_ENV=production
+      - PORT=4443
+    volumes:
+      - db-data:/app/data
+    networks:
+      - catty-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4411/api/services"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Nginx Server
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: catty-frontend
+    restart: unless-stopped
+    ports:
+      - "4412:80"
+    depends_on:
+      - backend
+    networks:
+      - catty-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  db-data:
+    driver: local
+
+networks:
+  catty-network:
+    driver: bridge
