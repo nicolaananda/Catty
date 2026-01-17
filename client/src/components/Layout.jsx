@@ -5,47 +5,44 @@ import { Settings } from 'lucide-react';
 export default function Layout() {
     const location = useLocation();
 
-    // Hide header on home page if desired, but let's keep it minimal
     const isHome = location.pathname === '/';
+    const isInbox = location.pathname.startsWith('/inbox');
+    const shouldShowNavbar = !isHome && !isInbox;
 
     return (
-        <div className="min-h-screen flex flex-col font-sans selection:bg-pink-500/30 bg-white text-slate-900">
+        <div className="min-h-screen flex flex-col font-sans selection:bg-pink-500/30 bg-[#FDF9FB] text-slate-900">
             {/* Navigation Bar */}
-            <nav className={`
-                fixed top-0 w-full z-50 transition-all duration-300
-                ${isHome
-                    ? 'bg-gradient-to-b from-white/90 to-transparent backdrop-blur-sm'
-                    : 'bg-white border-b-2 border-pink-100 shadow-sm'
-                }
-            `}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
+            {shouldShowNavbar && (
+                <nav className="fixed top-0 w-full z-50 transition-all duration-300 bg-white/80 backdrop-blur-md border-b border-pink-100 shadow-sm py-4">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex items-center justify-between">
+                            {/* Logo */}
+                            <Link to="/" className="flex items-center gap-3 group">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center shadow-md group-hover:shadow-pink-200 transition-all duration-300">
+                                    <span className="text-white font-bold text-lg pt-0.5">C</span>
+                                </div>
+                                <span className="font-display font-bold text-2xl tracking-tight text-slate-800">
+                                    Catty
+                                </span>
+                            </Link>
 
-                        {/* Logo */}
-                        <Link to="/" className="flex items-center gap-2 group">
-                            <span className="font-bold text-2xl tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-fuchsia-600 uppercase drop-shadow-sm">
-                                Catty 💅
-                            </span>
-                        </Link>
-
-                        {/* Right Actions */}
-                        <div className="flex items-center gap-4">
-                            {!isHome && (
+                            {/* Right Actions */}
+                            <div className="flex items-center gap-4">
                                 <Link
                                     to="/admin"
-                                    className="p-2 rounded-xl bg-pink-50 text-pink-400 hover:bg-pink-100 hover:text-pink-600 transition-all shadow-sm border border-pink-100"
-                                    title="Admin Panel"
+                                    className="p-2.5 rounded-full text-slate-400 hover:text-pink-600 hover:bg-pink-50 transition-all duration-300"
+                                    title="Admin Settings"
                                 >
-                                    <Settings size={20} />
+                                    <Settings size={20} strokeWidth={1.5} />
                                 </Link>
-                            )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </nav>
+                </nav>
+            )}
 
             {/* Main Content */}
-            <main className={`flex-grow ${isHome ? 'pt-0' : 'pt-16'}`}>
+            <main className={`flex-grow ${shouldShowNavbar ? 'pt-20' : ''}`}>
                 <Outlet />
             </main>
         </div>
