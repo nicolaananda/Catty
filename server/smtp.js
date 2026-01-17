@@ -15,7 +15,7 @@ const server = new SMTPServer({
     onRcptTo(address, session, callback) {
         console.log(`SMTP RCPT TO: ${address.address}`);
         // Validate supported domains
-        const allowedDomains = ['@catty.my.id', '@cattyprems.top', '@catsflix.site'];
+        const allowedDomains = ['@catty.my.id', '@cattyprems.top'];
         const isValid = allowedDomains.some(domain => address.address.endsWith(domain));
 
         if (!isValid) {

@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { initDB } = require('./db');
 // const smtpServer = require('./smtp'); // Deprecated for IMAP
-const { startImapPolling } = require('./imap');
+const { startImapListener } = require('./imap');
 const apiRoutes = require('./routes');
 
 const app = express();
@@ -28,8 +28,8 @@ initDB().then(() => {
         console.log(`HTTP API running on port ${API_PORT}`);
     });
 
-    // Start IMAP Polling
-    startImapPolling();
+    // Start IMAP Listener (IDLE)
+    startImapListener();
 
     // Auto-Delete Old Emails (Retention Policy: 24 Hours)
     // Runs every hour

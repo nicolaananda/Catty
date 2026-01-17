@@ -14,20 +14,18 @@ const config = {
     }
 };
 
-async function fetchEmails() {
-    try {
-        const connection = await imaps.connect(config);
-        await connection.openBox('INBOX');
 
+
+// Reusable function to fetch and save new messages
+async function fetchNewMessages(connection) {
+    try {
         const delay = 24 * 3600 * 1000;
         let yesterday = new Date();
         yesterday.setTime(Date.now() - delay);
-        const since = yesterday.toISOString();
 
-        // Criteria: SINCE yesterday
-        // Note: imap-simple search criteria format for date: ['SINCE', dateObject]
+        // Search for UNSEEN messages or just recent ones. 
+        // For IDLE, we usually care about what just arrived, but safety net: last 24h
         const searchCriteria = [['SINCE', yesterday]];
-
         const fetchOptions = {
             bodies: ['HEADER', 'TEXT', ''],
             markSeen: false
@@ -36,14 +34,16 @@ async function fetchEmails() {
         const messages = await connection.search(searchCriteria, fetchOptions);
         const db = getDB();
 
-        console.log(`IMAP: Found ${messages.length} messages since last 24h`);
+        if (messages.length > 0) {
+            console.log(`IMAP: Processing ${messages.length} messages...`);
+        }
 
         for (const item of messages) {
             // Get full body
             const fullBody = item.parts.find(p => p.which === '').body;
             const parsed = await simpleParser(fullBody);
 
-            const messageId = parsed.messageId || `no-id-${Date.now()}-${Math.random()}`; // Fallback if missing
+            const messageId = parsed.messageId || `no-id-${Date.now()}-${Math.random()}`;
             const fromAddr = parsed.from ? parsed.from.text : 'unknown';
             const subject = parsed.subject || '(No Subject)';
             const textBody = parsed.text;
@@ -65,25 +65,51 @@ async function fetchEmails() {
                 );
                 console.log(`IMAP Saved: ${subject} (${messageId})`);
             } catch (e) {
-                if (e.code === 'SQLITE_CONSTRAINT') {
-                    // console.log(`IMAP: Duplicate skipped (${messageId})`);
-                } else {
+                if (e.code !== 'SQLITE_CONSTRAINT') {
                     console.error('IMAP Insert Error:', e);
                 }
             }
         }
-
-        connection.end();
     } catch (err) {
-        console.error('IMAP Fetch Error:', err);
+        console.error('Error fetching messages:', err);
     }
 }
 
-// Polling Loop
-function startImapPolling(intervalMs = 10000) {
-    console.log('Starting IMAP polling service...');
-    fetchEmails(); // Initial fetch
-    setInterval(fetchEmails, intervalMs);
+let connection = null;
+
+async function startImapListener() {
+    try {
+        console.log('IMAP: Connecting to server...');
+        connection = await imaps.connect(config);
+
+        await connection.openBox('INBOX');
+        console.log('IMAP: Connected & Listening for new emails (IDLE)...');
+
+        // Initial Fetch
+        await fetchNewMessages(connection);
+
+        // Event: New Mail Arrived
+        connection.imap.on('mail', async (numNew) => {
+            console.log(`IMAP Event: ${numNew} new message(s) arrived!`);
+            await fetchNewMessages(connection);
+        });
+
+        // Event: Connection Closed/Error -> Reconnect
+        connection.imap.on('close', () => {
+            console.log('IMAP: Connection closed. Reconnecting in 5s...');
+            setTimeout(startImapListener, 5000);
+        });
+
+        connection.imap.on('error', (err) => {
+            console.error('IMAP Usage Error:', err);
+            // 'close' event usually follows error, handling reconnect there
+        });
+
+    } catch (err) {
+        console.error('IMAP Connection Failed:', err);
+        console.log('IMAP: Retrying in 10s...');
+        setTimeout(startImapListener, 10000);
+    }
 }
 
-module.exports = { startImapPolling };
+module.exports = { startImapListener };

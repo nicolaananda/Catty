@@ -7,7 +7,7 @@ export default function Home() {
     const navigate = useNavigate();
     const [selectedDomain, setSelectedDomain] = useState('@catty.my.id');
     const [isLoading, setIsLoading] = useState(false);
-    const domains = ['@catty.my.id', '@cattyprems.top', '@catsflix.site'];
+    const domains = ['@catty.my.id', '@cattyprems.top'];
 
     const handleGo = () => {
         setIsLoading(true);
